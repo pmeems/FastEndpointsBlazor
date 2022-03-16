@@ -1,0 +1,56 @@
+﻿@inherits LayoutComponentBase
+
+<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" Theme="_kpnTheme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        <MudText Typo="Typo.h5" Class="ml-3">PersonalCloud Portal</MudText>
+        <MudSpacer />
+        <MudToggleIconButton @bind-Toggled="@_isDarkMode"
+                             Icon="@Icons.Filled.Brightness5" Color="@Color.Error" Title="Turn on Dark Mode"
+                             ToggledIcon="@Icons.Filled.Brightness4" ToggledColor="@Color.Error" ToggledTitle="Turn on Light Mode"
+                             Edge="Edge.End" />
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+        <NavMenu />
+    </MudDrawer>
+    <MudMainContent>
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+    private bool _isDarkMode;
+    private MudThemeProvider _mudThemeProvider;
+    private MudTheme _kpnTheme = new MudTheme();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Get the user defined dark theme preference. Returns true if dark mode is preferred:
+            _isDarkMode = await _mudThemeProvider.GetSystemPreference();
+
+            // Light theme, should be the Lightgreen pallette
+           
+            _kpnTheme.Palette.AppbarBackground = new MudBlazor.Utilities.MudColor("#00c300"); 
+            _kpnTheme.Palette.Primary = new MudBlazor.Utilities.MudColor("#090");
+            _kpnTheme.Palette.TextPrimary = new MudBlazor.Utilities.MudColor("#333");
+
+            // Dark theme, should be the Green pallette
+            _kpnTheme.PaletteDark.AppbarBackground = new MudBlazor.Utilities.MudColor("#1b9422");
+            _kpnTheme.PaletteDark.Primary = new MudBlazor.Utilities.MudColor("#37793b");
+
+            StateHasChanged();
+        }
+    }
+
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}

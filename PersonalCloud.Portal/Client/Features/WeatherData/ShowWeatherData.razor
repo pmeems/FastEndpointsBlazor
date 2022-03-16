@@ -1,0 +1,114 @@
+﻿@page "/showweatherdata"
+
+@using PersonalCloud.Portal.Shared
+@inject HttpClient Http
+@inject Features.WeatherData.WeatherDataService WeatherDataService;
+@inject ILogger<ShowWeatherData> Logger;
+
+<PageTitle>Weather forecast</PageTitle>
+
+<MudPaper class="ma-4 pa-4">
+    <MudText Typo="Typo.h2">Weather forecast</MudText>
+    <MudText Typo="Typo.body1">This component demonstrates fetching data from the server.</MudText>
+</MudPaper>
+
+@if (forecasts == null)
+{
+    <MudText Typo="Typo.overline">Loading forecast data...</MudText>
+}
+else
+{
+    <MudTable Items="@forecasts" Dense="true" Hover="true" Bordered="true" Striped="true" Loading="@tableDataLoading"
+          Filter="new Func<WeatherForecast,bool>(FilterFunc1)" @bind-SelectedItem="selectedItem1">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Weather forecasts</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="searchString1" Placeholder="Search" Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh><MudTableSortLabel SortBy="new Func<WeatherForecast, object>(x=>x.Date)" InitialDirection="SortDirection.Ascending">Date</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<WeatherForecast, object>(x=>x.TemperatureC)">Temp. (C)</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<WeatherForecast, object>(x=>x.TemperatureF)">Temp. (F)</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<WeatherForecast, object>(x=>x.Summary)">Summary</MudTableSortLabel></MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Date">@context.Date.ToShortDateString()</MudTd>
+            <MudTd DataLabel="Temp. (C)">@context.TemperatureC</MudTd>
+            <MudTd DataLabel="Temp. (F)">@context.TemperatureF</MudTd>
+            <MudTd DataLabel="Summary">@context.Summary</MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+
+    <div class="d-flex flex-wrap ma-4">
+        <div style="min-width:200px;">
+            <MudText Inline="true" Class="align-self-center">Selected1: @selectedItem1?.Date.ToShortDateString()</MudText>
+        </div>
+    </div>
+}
+
+@code {
+    private List<WeatherForecast> forecasts = new List<WeatherForecast>();
+    private string searchString1 = "";
+    private WeatherForecast? selectedItem1 = null;
+    private HashSet<WeatherForecast> selectedItems = new HashSet<WeatherForecast>();
+    private bool tableDataLoading = true;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        //forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("WeatherForecast/get");
+
+        Logger.LogDebug("In FetchData.OnInitializedAsync()");
+
+        // await foreach is used on an IAsyncEnumerable
+        // which returns items one at a time using 'yield return'
+        await foreach (var data in WeatherDataService.GetAllStream())
+        {
+            // Add this WeatherForecast to the list
+            forecasts.Add(data);
+
+            // have we reached 20 yet?
+            if (forecasts.Count == 20)
+            {
+                Logger.LogDebug("Data: " + data);
+                // yes! That's enough to show some data
+                // refresh the page
+                await InvokeAsync(StateHasChanged);
+
+                // we need this because we're in a tight loop.
+                // give the UI a chance to re-render
+                await Task.Delay(1);
+            }
+            else if (forecasts.Count % 200 == 0)
+            {
+                // yes! refresh the UI. Also updated the Loading indicator
+                await InvokeAsync(StateHasChanged);
+                await Task.Delay(1); // give the UI a chance to re-render
+            }
+        }
+
+        // Hide Loading indicator:
+        tableDataLoading = false;
+
+        // Render at the end:
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private bool FilterFunc1(WeatherForecast forecast) => FilterFunc(forecast, searchString1);
+
+    private bool FilterFunc(WeatherForecast forecast, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (forecast.Summary.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if ($"{forecast.Date} {forecast.TemperatureC} {forecast.TemperatureF}".Contains(searchString))
+            return true;
+        return false;
+    }
+
+}

@@ -1,0 +1,86 @@
+﻿@page "/counter"
+
+@inject Features.WeatherData.WeatherDataService WeatherDataService;
+
+<button @onclick="APIButtonClicked">Test API</button>
+<button @onclick="APIStreamButtonClicked">Test API Stream</button>
+<br />
+<p>@APIResult</p>
+
+
+@code {
+    string APIResult = "";
+    List<WeatherForecast> WeatherForecasts { get; set; } = new List<WeatherForecast>();
+
+    async Task APIButtonClicked()
+    {
+        // set up
+        WeatherForecasts.Clear();
+        await Task.Delay(1);
+        APIResult = "Loading...";
+        await InvokeAsync(StateHasChanged);
+
+        // start time
+        var startTime = DateTime.Now;
+
+        // wait for all records
+        WeatherForecasts = await WeatherDataService.GetAll();
+        if (WeatherForecasts != null)
+        {
+            // elapsed time
+            var elapsed = DateTime.Now.Subtract(startTime);
+            APIResult = $"{WeatherForecasts.Count} records returned via API in {elapsed.TotalMilliseconds} ms.";
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    async Task APIStreamButtonClicked()
+    {
+        // set up
+        WeatherForecasts.Clear();
+        await Task.Delay(1);
+        APIResult = "Loading...";
+        await InvokeAsync(StateHasChanged);
+
+        // start time
+        double elapsed20 = 0;
+        var startTime = DateTime.Now;
+
+        // await foreach is used on an IAsyncEnumerable
+        // which returns items one at a time using 'yield return'
+        await foreach (var WeatherForecast in WeatherDataService.GetAllStream())
+        {
+            // Add this WeatherForecast to the list
+            WeatherForecasts.Add(WeatherForecast);
+
+            // have we reached 20 yet?
+            if (WeatherForecasts.Count == 20)
+            {
+                // yes! That's enough to fill up the <select>
+                elapsed20 = DateTime.Now.Subtract(startTime).TotalMilliseconds;
+                APIResult = $"Loading ({elapsed20} ms)...{WeatherForecasts.Count}";
+
+                // refresh the page
+                await InvokeAsync(StateHasChanged);
+
+                // we need this because we're in a tight loop.
+                // give the UI a chance to re-render
+                await Task.Delay(1);
+            }
+
+            // Is the count evenly divisible by 100?
+            else if (WeatherForecasts.Count % 100 == 0)
+            {
+                // yes! refresh the UI.
+                APIResult = $"Loading ({elapsed20} ms)...{WeatherForecasts.Count}";
+                await InvokeAsync(StateHasChanged);
+                await Task.Delay(1);
+            }
+        }
+        
+        // show elapsed time
+        var elapsed = DateTime.Now.Subtract(startTime);
+        APIResult = $"{WeatherForecasts.Count} records returned via API Stream in {elapsed.TotalMilliseconds} ms. " 
+            + $" Initial 20 in {elapsed20} ms." ;
+    }
+}
