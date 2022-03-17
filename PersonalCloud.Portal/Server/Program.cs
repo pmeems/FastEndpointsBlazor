@@ -37,7 +37,8 @@ app.UseHttpsRedirection();
 
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
-app.UseRouting();
+app.UseDefaultFiles();
+//app.UseRouting();
 
 // https://dev.to/djnitehawk/building-rest-apis-in-net-6-the-easy-way-3h0d:
 app.UseAuthorization();
@@ -53,6 +54,6 @@ app.UseSwaggerUi3(c => c.ConfigureDefaults());
 
 app.MapRazorPages();
 app.MapControllers();
-app.MapFallbackToFile("index.html");
+//app.MapFallbackToFile("index.html");
 
 app.Run();
